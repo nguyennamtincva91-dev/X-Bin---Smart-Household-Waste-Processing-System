@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>X-BIN · HMI Touch Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bezel-1: #07100d; --bezel-2: #112019; --bezel-edge: #1f3528;
+  --bg-screen: #050b0d; --bg-1: #08161a; --bg-2: #0c2025;
+  --bg-3: rgba(20, 40, 38, 0.55);
+  --border: rgba(52, 211, 153, 0.20);
+  --border-strong: rgba(52, 211, 153, 0.45);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --bronze: #10b981; --bronze-bright: #6ee7b7; --bronze-deep: #047857;
+  --bronze-glow: rgba(110, 231, 183, 0.30);
+  --text-1: #f3eee5; --text-2: #a8b0c2; --text-3: #6b7388; --text-dim: #4a5168;
+  --success: #4ade80; --warning: #fbbf24; --danger: #f87171; --info: #60a5fa; --cyan: #67e8f9;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%;
+  background: radial-gradient(ellipse at center, #0e2622 0%, #030806 80%);
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: var(--text-1); overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+body { display: grid; place-items: center; padding: 20px; }
+body.kiosk { padding: 0; background: #000; }
+body.kiosk .hmi { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; padding: 0; border: none; box-shadow: none; }
+body.kiosk .hmi::before, body.kiosk .hmi::after { display: none; }
+body.kiosk .hmi-logo { display: none; }
+body.kiosk .bezel-leds { display: none; }
+body.kiosk .screen { border-radius: 0; }
+
+.hmi {
+  width: min(100%, 1100px); aspect-ratio: 16/10;
+  background: linear-gradient(145deg, var(--bezel-2), var(--bezel-1));
+  border-radius: 22px; padding: 32px 24px 28px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -2px 0 rgba(0,0,0,0.6);
+  position: relative; border: 1px solid var(--bezel-edge);
+}
+.hmi::before, .hmi::after { content:''; position: absolute; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle, #3a3f48 0%, #15181d 70%); box-shadow: inset 0 1px 1px rgba(255,255,255,0.1); }
+.hmi::before { top: 10px; left: 10px; } .hmi::after { top: 10px; right: 10px; }
+.hmi-logo { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); font-family: 'Cormorant Garamond', serif; font-size: 14px; letter-spacing: 0.32em; color: rgba(110,231,183,0.35); }
+.hmi-logo b { color: rgba(110,231,183,0.7); font-weight: 600; }
+.bezel-leds { position: absolute; right: -18px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 14px; }
+.bezel-led { width: 10px; height: 10px; border-radius: 50%; background: #1a1d22; box-shadow: inset 0 0 4px rgba(0,0,0,0.6); }
+.bezel-led.on { background: var(--success); box-shadow: 0 0 10px var(--success); }
+.bezel-led.amber.on { background: var(--bronze-bright); box-shadow: 0 0 10px var(--bronze-bright); }
+.bezel-led.red.on { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+.screen {
+  width: 100%; height: 100%;
+  background: var(--bg-screen);
+  background-image: radial-gradient(ellipse at 25% 0%, rgba(52,211,153,0.07), transparent 55%), radial-gradient(ellipse at 75% 100%, rgba(34,160,140,0.10), transparent 55%), linear-gradient(180deg, var(--bg-screen), var(--bg-1));
+  border-radius: 8px; overflow: hidden;
+  display: grid; grid-template-rows: 44px 1fr 64px; position: relative;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 0 40px rgba(0,0,0,0.5);
+}
+.screen::before { content:''; position: absolute; inset: 0; pointer-events: none; z-index: 99; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.012), rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px); }
+.screen::after { content:''; position: absolute; inset: 0; pointer-events: none; z-index: 100; background: linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.015) 100%); border-radius: 8px; }
+
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: rgba(0,0,0,0.35); border-bottom: 1px solid var(--border-soft); font-size: 12px; z-index: 5; }
+.sb-left, .sb-right { display: flex; align-items: center; gap: 14px; }
+.sb-brand { display: flex; align-items: center; gap: 8px; }
+.sb-brand-mark { width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 5px; background: rgba(52,211,153,0.08); }
+.sb-brand-mark svg { width: 12px; height: 12px; stroke: var(--bronze-bright); fill: none; stroke-width: 1.8; }
+.sb-brand-text { font-family: 'Cormorant Garamond', serif; font-size: 16px; letter-spacing: 0.14em; color: var(--text-1); }
+.sb-brand-text b { color: var(--bronze-bright); }
+.sb-divider { width: 1px; height: 16px; background: var(--border-soft); }
+.sb-meta { font-size: 11px; color: var(--text-3); letter-spacing: 0.10em; text-transform: uppercase; }
+.sb-icon { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-2); letter-spacing: 0.05em; }
+.sb-icon svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.sb-icon.ok { color: var(--success); }
+.sb-icon.warn { color: var(--warning); }
+.sb-icon.err { color: var(--danger); }
+.sb-clock { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--bronze-bright); letter-spacing: 0.04em; font-weight: 500; }
+
+.content { padding: 18px 22px; overflow-y: auto; position: relative; z-index: 2; }
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-thumb { background: var(--bronze-deep); border-radius: 2px; }
+.page { display: none; animation: fadeIn 0.35s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 12px; border-bottom: 1px solid var(--border-soft); margin-bottom: 18px; }
+.page-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 500; letter-spacing: 0.04em; color: var(--text-1); }
+.page-title small { display: block; font-family: 'Inter', sans-serif; font-size: 10px; color: var(--text-3); letter-spacing: 0.28em; text-transform: uppercase; margin-bottom: 2px; }
+.page-action { display: flex; gap: 8px; }
+
+.nav { display: grid; grid-template-columns: repeat(6, 1fr); background: rgba(0,0,0,0.45); border-top: 1px solid var(--border-soft); z-index: 5; }
+.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: transparent; border: none; cursor: pointer; color: var(--text-3); font-family: inherit; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500; padding: 6px; border-top: 2px solid transparent; transition: all 0.2s ease; position: relative; }
+.nav-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.nav-item:hover { color: var(--text-2); }
+.nav-item.active { color: var(--bronze-bright); background: linear-gradient(180deg, rgba(110,231,183,0.10), transparent); border-top-color: var(--bronze-bright); }
+.nav-item .nav-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--danger); color: #fff; font-size: 9px; padding: 1px 5px; border-radius: 8px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+.btn { font-family: inherit; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; border-radius: 8px; cursor: pointer; border: 1px solid; padding: 12px 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; background: transparent; }
+.btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-primary { background: linear-gradient(135deg, var(--bronze-deep), var(--bronze)); border-color: var(--bronze); color: var(--text-1); box-shadow: 0 4px 14px rgba(52,211,153,0.30), inset 0 1px 0 rgba(255,255,255,0.12); }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(52,211,153,0.42); }
+.btn-ghost { color: var(--text-2); border-color: var(--border); }
+.btn-ghost:hover:not(:disabled) { color: var(--text-1); border-color: var(--border-strong); background: rgba(52,211,153,0.06); }
+.btn-danger { color: var(--danger); border-color: rgba(248,113,113,0.30); }
+.btn-danger:hover:not(:disabled) { background: rgba(248,113,113,0.10); border-color: rgba(248,113,113,0.5); }
+.btn-success { color: var(--success); border-color: rgba(74,222,128,0.30); }
+.btn-success:hover:not(:disabled) { background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.55); }
+
+.tbtn { padding: 22px 16px; border: 1px solid var(--border-soft); border-radius: 12px; background: rgba(0,0,0,0.25); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: all 0.2s ease; color: var(--text-2); font-family: inherit; font-weight: 500; }
+.tbtn svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+.tbtn-label { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+.tbtn:hover { color: var(--bronze-bright); border-color: var(--border-strong); background: rgba(110,231,183,0.06); }
+
+.badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; border: 1px solid; }
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge[data-s="ready"] { color: #5eead4; border-color: rgba(94,234,212,0.32); background: rgba(94,234,212,0.08); }
+.badge[data-s="running"] { color: var(--bronze-bright); border-color: rgba(110,231,183,0.42); background: rgba(110,231,183,0.06); }
+.badge[data-s="done"] { color: var(--success); border-color: rgba(74,222,128,0.32); background: rgba(74,222,128,0.06); }
+.badge[data-s="error"] { color: var(--danger); border-color: rgba(248,113,113,0.32); background: rgba(248,113,113,0.06); }
+.badge[data-s="running"] .dot { animation: pulse-dot 1.3s infinite; }
+@keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.4); } }
+
+.panel { background: var(--bg-3); backdrop-filter: blur(10px); border: 1px solid var(--border-soft); border-radius: 12px; padding: 16px 18px; }
+.panel-title { font-size: 10px; letter-spacing: 0.22em; color: var(--text-3); text-transform: uppercase; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.panel-title::before { content:''; width: 14px; height: 1px; background: var(--bronze); }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; height: 100%; }
+.bin-tile { padding: 18px 20px; background: linear-gradient(145deg, rgba(10,40,35,0.65), rgba(5,22,20,0.45)); border: 1px solid var(--border-soft); border-radius: 14px; position: relative; overflow: hidden; cursor: pointer; transition: all 0.25s; }
+.bin-tile:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.bin-tile::after { content:''; position: absolute; top: 0; left: 0; height: 2px; width: 55px; background: linear-gradient(90deg, var(--bronze-bright), transparent); }
+.bt-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.bt-type { font-size: 9px; letter-spacing: 0.32em; color: var(--bronze); text-transform: uppercase; }
+.bt-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--text-1); margin-top: 2px; }
+.bt-icon { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 9px; background: rgba(52,211,153,0.06); }
+.bt-icon svg { width: 20px; height: 20px; stroke: var(--bronze-bright); fill: none; stroke-width: 1.6; }
+.bt-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.bt-metric { padding: 8px 10px; background: rgba(0,0,0,0.30); border-radius: 6px; }
+.bt-metric-l { font-size: 9px; color: var(--text-3); letter-spacing: 0.14em; text-transform: uppercase; }
+.bt-metric-v { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-1); margin-top: 3px; font-weight: 500; }
+
+.summary { padding: 14px 18px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-soft); border-radius: 14px; display: flex; justify-content: space-around; align-items: center; }
+.sum-item { text-align: center; }
+.sum-l { font-size: 9px; color: var(--text-3); letter-spacing: 0.20em; text-transform: uppercase; margin-bottom: 4px; }
+.sum-v { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--bronze-bright); font-weight: 600; }
+.sum-v small { font-size: 12px; color: var(--text-3); }
+
+.quick-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; background: rgba(0,0,0,0.30); border: 1px solid var(--border-soft); border-radius: 14px; grid-column: span 2; }
+.quick-bar .tbtn { padding: 12px 8px; }
+.quick-bar .tbtn svg { width: 20px; height: 20px; }
+.quick-bar .tbtn-label { font-size: 10px; }
+
+.bin-layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; }
+.gauge-wrap { padding: 16px; text-align: center; }
+.gauge { width: 180px; height: 100px; margin: 0 auto; position: relative; overflow: hidden; }
+.gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.gauge-arc-bg { stroke: rgba(255,255,255,0.08); fill: none; stroke-width: 12; stroke-linecap: round; }
+.gauge-arc-fill { stroke: var(--bronze-bright); fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.4s; filter: drop-shadow(0 0 6px var(--bronze-glow)); }
+.gauge-value { position: absolute; bottom: -2px; left: 0; right: 0; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 28px; color: var(--text-1); font-weight: 600; }
+.gauge-value small { font-size: 12px; color: var(--text-3); font-weight: 400; }
+.gauge-l { font-size: 9px; letter-spacing: 0.22em; color: var(--text-3); text-transform: uppercase; margin-top: 6px; }
+
+.led-row { display: grid; gap: 8px; }
+.led-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(0,0,0,0.22); border: 1px solid var(--border-soft); border-radius: 8px; }
+.led { width: 12px; height: 12px; border-radius: 50%; background: #1a1d22; box-shadow: inset 0 0 4px rgba(0,0,0,0.7); flex-shrink: 0; }
+.led.on { background: var(--bronze-bright); box-shadow: 0 0 12px var(--bronze-glow), inset 0 0 2px rgba(255,255,255,0.4); }
+.led.on.green { background: var(--success); box-shadow: 0 0 12px rgba(74,222,128,0.6); }
+.led.on.red { background: var(--danger); box-shadow: 0 0 12px rgba(248,113,113,0.6); }
+.led.on.cyan { background: var(--cyan); box-shadow: 0 0 12px rgba(103,232,249,0.6); }
+.led-item-name { flex: 1; font-size: 12px; color: var(--text-2); }
+.led-item-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); }
+
+.steps { display: grid; gap: 6px; }
+.step { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-soft); border-radius: 8px; transition: all 0.3s; }
+.step.active { background: rgba(110,231,183,0.06); border-color: rgba(110,231,183,0.30); }
+.step.done { background: rgba(74,222,128,0.04); border-color: rgba(74,222,128,0.22); }
+.step-num { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,0.04); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); font-weight: 700; border: 1px solid var(--border-soft); }
+.step.active .step-num { color: var(--bronze-bright); border-color: var(--bronze); background: rgba(110,231,183,0.10); }
+.step.done .step-num { color: var(--success); border-color: rgba(74,222,128,0.40); background: rgba(74,222,128,0.10); }
+.step-name { font-size: 13px; color: var(--text-2); }
+.step.active .step-name { color: var(--text-1); }
+.step-status { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+.step.active .step-status { color: var(--bronze-bright); }
+.step.done .step-status { color: var(--success); }
+
+.cycle-progress { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cp-ring { position: relative; width: 110px; height: 110px; }
+.cp-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.cp-ring-bg { stroke: rgba(255,255,255,0.06); fill: none; stroke-width: 8; }
+.cp-ring-fill { stroke: var(--bronze-bright); fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.4s; filter: drop-shadow(0 0 6px var(--bronze-glow)); }
+.cp-num { position: absolute; inset: 0; display: grid; place-items: center; }
+.cp-num span { font-family: 'JetBrains Mono', monospace; font-size: 24px; color: var(--text-1); font-weight: 600; }
+.cp-num small { display: block; font-size: 9px; color: var(--text-3); letter-spacing: 0.18em; text-align: center; margin-top: 2px; }
+
+.ctrl-pad { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+.ctrl-pad .btn { padding: 16px; font-size: 13px; }
+
+.set-list { display: grid; gap: 10px; }
+.set-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 12px 16px; background: rgba(0,0,0,0.20); border: 1px solid var(--border-soft); border-radius: 8px; }
+.set-l { font-size: 12px; color: var(--text-2); }
+.set-l small { display: block; font-size: 10px; color: var(--text-3); margin-top: 3px; letter-spacing: 0.05em; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: rgba(0,0,0,0.30); }
+.stepper button { width: 32px; height: 32px; background: transparent; border: none; color: var(--text-2); cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.2s; }
+.stepper button:hover { background: rgba(110,231,183,0.10); color: var(--bronze-bright); }
+.stepper-v { min-width: 70px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-1); padding: 0 8px; font-weight: 500; }
+.mode-toggle { display: inline-flex; padding: 3px; background: rgba(0,0,0,0.4); border-radius: 7px; border: 1px solid var(--border-soft); }
+.mode-toggle button { padding: 7px 14px; background: transparent; border: none; cursor: pointer; color: var(--text-3); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; border-radius: 5px; transition: all 0.2s; font-family: inherit; font-weight: 500; }
+.mode-toggle button.active { background: var(--bronze-deep); color: var(--text-1); }
+.switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch-slider { position: absolute; cursor: pointer; inset: 0; background: rgba(255,255,255,0.10); border-radius: 999px; transition: 0.3s; }
+.switch-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: var(--text-3); border-radius: 50%; transition: 0.3s; }
+input:checked + .switch-slider { background: var(--bronze-deep); }
+input:checked + .switch-slider::before { transform: translateX(20px); background: var(--bronze-bright); }
+
+.log-table { width: 100%; border-collapse: collapse; }
+.log-table th { text-align: left; font-size: 10px; letter-spacing: 0.22em; color: var(--text-3); text-transform: uppercase; font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
+.log-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 12px; }
+.log-table tr:hover { background: rgba(110,231,183,0.04); }
+.lt-time { font-family: 'JetBrains Mono', monospace; color: var(--text-3); font-size: 11px; }
+.lt-bin { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--text-3); }
+.lt-msg { color: var(--text-2); }
+.lt-icon { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; font-size: 10px; font-weight: 700; }
+.lt-icon.info { background: rgba(96,165,250,0.12); color: var(--info); }
+.lt-icon.success { background: rgba(74,222,128,0.12); color: var(--success); }
+.lt-icon.warn { background: rgba(251,191,36,0.12); color: var(--warning); }
+.lt-icon.error { background: rgba(248,113,113,0.12); color: var(--danger); }
+.log-wrap { max-height: 100%; overflow-y: auto; }
+.log-wrap::-webkit-scrollbar { width: 4px; }
+.log-wrap::-webkit-scrollbar-thumb { background: var(--bronze-deep); border-radius: 2px; }
+
+.sys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sys-card { padding: 14px 16px; background: rgba(0,0,0,0.22); border: 1px solid var(--border-soft); border-radius: 10px; }
+.sys-card-l { font-size: 10px; color: var(--text-3); letter-spacing: 0.20em; text-transform: uppercase; margin-bottom: 6px; }
+.sys-card-v { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--bronze-bright); font-weight: 500; }
+.sys-card-v small { font-size: 11px; color: var(--text-3); margin-left: 4px; }
+
+.emergency { margin-top: 14px; padding: 18px; background: rgba(248,113,113,0.06); border: 1.5px solid rgba(248,113,113,0.30); border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.2s; }
+.emergency:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.55); }
+.emergency-l { font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--danger); font-weight: 700; }
+.emergency-s { font-size: 10px; color: var(--text-3); margin-top: 4px; letter-spacing: 0.06em; }
+
+.conn-bar { display: flex; gap: 2px; align-items: flex-end; }
+.conn-bar span { width: 3px; background: var(--success); border-radius: 1px; }
+.conn-bar span:nth-child(1) { height: 4px; }
+.conn-bar span:nth-child(2) { height: 7px; }
+.conn-bar span:nth-child(3) { height: 10px; }
+.conn-bar span:nth-child(4) { height: 13px; }
+.conn-bar.offline span { background: var(--text-dim); }
+
+.toast { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%) translateY(40px); background: rgba(8,28,24,0.95); color: var(--text-1); padding: 12px 22px; border: 1px solid var(--border-strong); border-radius: 10px; font-size: 12px; letter-spacing: 0.10em; text-transform: uppercase; opacity: 0; transition: all 0.3s; z-index: 999; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Touch optimization */
+@media (pointer: coarse) {
+  .btn { padding: 14px 22px; }
+  .stepper button { width: 38px; height: 38px; }
+  .mode-toggle button { padding: 10px 16px; }
+}
+
+/* ============================================================
+   COMPACT MODE — màn nhỏ ≤ 500px (Raspberry Pi 3.5" TFT 480×320)
+   Touch-optimized: button to, hit area rộng cho ngón tay
+   ============================================================ */
+@media (max-width: 500px), (max-height: 360px) {
+  /* Loại bỏ delay 300ms khi tap, ngăn double-tap zoom */
+  * { touch-action: manipulation; -webkit-tap-highlight-color: rgba(110,231,183,0.3); }
+
+  body { padding: 0; background: #000; }
+  .hmi {
+    width: 100vw; height: 100vh; max-width: none;
+    aspect-ratio: auto; border-radius: 0;
+    padding: 0; border: none; box-shadow: none;
+  }
+  .hmi::before, .hmi::after, .hmi-logo, .bezel-leds { display: none; }
+  /* Nav bar to hơn cho dễ chạm: 56px thay vì 44px */
+  .screen { border-radius: 0; grid-template-rows: 26px 1fr 56px; }
+  .screen::before, .screen::after { display: none; }
+
+  /* Status bar */
+  .status-bar { padding: 0 8px; font-size: 10px; }
+  .sb-brand-mark { width: 16px; height: 16px; border-radius: 3px; }
+  .sb-brand-mark svg { width: 9px; height: 9px; }
+  .sb-brand-text { font-size: 12px; letter-spacing: 0.08em; }
+  .sb-meta { font-size: 8px; letter-spacing: 0.06em; }
+  .sb-divider { display: none; }
+  .sb-icon { font-size: 9px; gap: 3px; }
+  .sb-icon svg { width: 10px; height: 10px; }
+  .conn-bar { display: none; }
+  .sb-clock { font-size: 11px; }
+  .sb-left, .sb-right { gap: 6px; }
+
+  /* Content padding */
+  .content { padding: 8px 10px; }
+  .page-head { padding-bottom: 6px; margin-bottom: 8px; }
+  .page-title { font-size: 16px; }
+  .page-title small { font-size: 8px; letter-spacing: 0.16em; margin-bottom: 1px; }
+  .page-action .btn { padding: 6px 10px; font-size: 9px; letter-spacing: 0.06em; }
+  .page-action .btn svg { width: 10px; height: 10px; }
+
+  /* Nav (6 tabs vừa 480px) — TO HƠN để dễ chạm */
+  .nav-item { padding: 6px 2px; font-size: 9px; letter-spacing: 0.04em; gap: 2px; min-height: 56px; }
+  .nav-item svg { width: 22px; height: 22px; stroke-width: 2; }
+  .nav-item.active { border-top-width: 3px; }
+  .nav-item .nav-badge { font-size: 8px; padding: 1px 4px; top: 4px; right: calc(50% - 18px); font-weight: 700; }
+
+  /* HOME page: stack vertical, 2 tile compact — TILE PHẢI TO ĐỦ ĐỂ CHẠM */
+  .home-grid { grid-template-columns: 1fr; gap: 6px; }
+  .bin-tile { padding: 10px 12px; border-radius: 8px; min-height: 70px; }
+  .bin-tile::after { width: 30px; }
+  .bt-head { margin-bottom: 6px; }
+  .bt-type { font-size: 7px; letter-spacing: 0.18em; }
+  .bt-name { font-size: 14px; }
+  .bt-icon { width: 24px; height: 24px; border-radius: 5px; }
+  .bt-icon svg { width: 12px; height: 12px; }
+  .bt-metrics { gap: 4px; margin-top: 6px; }
+  .bt-metric { padding: 4px 6px; }
+  .bt-metric-l { font-size: 7px; letter-spacing: 0.08em; }
+  .bt-metric-v { font-size: 11px; margin-top: 1px; }
+  .badge { padding: 2px 7px; font-size: 8px; letter-spacing: 0.10em; }
+  .badge .dot { width: 4px; height: 4px; }
+
+  .summary { padding: 6px 8px; border-radius: 8px; }
+  .sum-l { font-size: 7px; letter-spacing: 0.12em; margin-bottom: 1px; }
+  .sum-v { font-size: 14px; }
+  .sum-v small { font-size: 8px; }
+
+  /* Quick bar (E-Stop, Cài đặt, Nhật ký, Hệ thống) — TBTN TO HƠN */
+  .quick-bar { grid-column: span 1; grid-template-columns: repeat(4, 1fr); padding: 6px; gap: 5px; border-radius: 8px; }
+  .quick-bar .tbtn { padding: 10px 4px; gap: 4px; min-height: 56px; border-radius: 8px; }
+  .quick-bar .tbtn svg { width: 20px; height: 20px; }
+  .quick-bar .tbtn-label { font-size: 9px; letter-spacing: 0.06em; font-weight: 500; }
+
+  /* BIN page */
+  .bin-layout { grid-template-columns: 1fr; gap: 8px; }
+  .panel { padding: 8px 10px; border-radius: 8px; }
+  .panel-title { font-size: 8px; letter-spacing: 0.14em; margin-bottom: 6px; gap: 5px; }
+  .panel-title::before { width: 8px; }
+
+  /* Gauge + ring compact */
+  .gauge-wrap { padding: 4px; }
+  .gauge { width: 120px; height: 70px; }
+  .gauge-value { font-size: 18px; }
+  .gauge-value small { font-size: 8px; }
+  .gauge-l { font-size: 7px; margin-top: 2px; letter-spacing: 0.14em; }
+  .cp-ring { width: 70px; height: 70px; }
+  .cp-num span { font-size: 16px; }
+  .cp-num small { font-size: 6px; letter-spacing: 0.12em; }
+
+  /* LED rows */
+  .led-row { gap: 4px; }
+  .led-item { padding: 5px 8px; gap: 8px; border-radius: 5px; }
+  .led { width: 9px; height: 9px; }
+  .led-item-name { font-size: 9px; }
+  .led-item-val { font-size: 8px; }
+
+  /* Steps */
+  .steps { gap: 3px; }
+  .step { padding: 6px 8px; gap: 6px; grid-template-columns: 18px 1fr auto; border-radius: 5px; }
+  .step-num { width: 18px; height: 18px; font-size: 8px; }
+  .step-name { font-size: 10px; }
+  .step-status { font-size: 7px; letter-spacing: 0.08em; }
+
+  /* Control pad — BUTTONS TO HƠN */
+  .ctrl-pad { gap: 6px; margin-top: 10px; }
+  .ctrl-pad .btn { padding: 13px 4px; font-size: 11px; letter-spacing: 0.06em; gap: 5px; min-height: 44px; }
+  .ctrl-pad .btn svg { width: 14px; height: 14px; }
+
+  /* SETTINGS page — STEPPER & SWITCH TO HƠN */
+  .row-2 { grid-template-columns: 1fr; gap: 8px; }
+  .set-list { gap: 5px; }
+  .set-row { padding: 8px 10px; gap: 8px; border-radius: 6px; min-height: 44px; }
+  .set-l { font-size: 10px; }
+  .set-l small { font-size: 8px; }
+  /* Stepper +/- nút to 40x40 cho dễ chạm bằng ngón */
+  .stepper { border-radius: 8px; }
+  .stepper button { width: 40px; height: 40px; font-size: 18px; font-weight: 600; }
+  .stepper-v { font-size: 12px; min-width: 56px; padding: 0 6px; }
+  /* Mode toggle (Manual/Auto) to hơn */
+  .mode-toggle { padding: 4px; }
+  .mode-toggle button { padding: 9px 12px; font-size: 10px; letter-spacing: 0.06em; min-height: 36px; min-width: 60px; }
+  /* Switch to hơn (44x28 thay vì 34x18) */
+  .switch { width: 50px; height: 28px; }
+  .switch-slider::before { width: 22px; height: 22px; top: 3px; left: 3px; }
+  input:checked + .switch-slider::before { transform: translateX(22px); }
+
+  /* LOG page */
+  .log-table th { font-size: 7px; letter-spacing: 0.10em; padding: 5px 6px; }
+  .log-table td { padding: 5px 6px; font-size: 9px; }
+  .lt-time { font-size: 8px; }
+  .lt-bin { font-size: 7px; letter-spacing: 0.06em; }
+  .lt-icon { width: 14px; height: 14px; font-size: 7px; }
+
+  /* SYSTEM page */
+  .sys-grid { grid-template-columns: 1fr 1fr; gap: 5px; }
+  .sys-card { padding: 5px 7px; border-radius: 5px; }
+  .sys-card-l { font-size: 7px; letter-spacing: 0.10em; margin-bottom: 2px; }
+  .sys-card-v { font-size: 11px; }
+  .sys-card-v small { font-size: 8px; }
+  .emergency { padding: 9px; margin-top: 6px; border-radius: 6px; }
+  .emergency-l { font-size: 9px; letter-spacing: 0.18em; }
+  .emergency-s { font-size: 7px; letter-spacing: 0.04em; }
+
+  /* Toast */
+  .toast { bottom: 48px; padding: 7px 12px; font-size: 9px; letter-spacing: 0.06em; }
+}
+</style>
+</head>
+<body>
+<div class="hmi">
+  <div class="hmi-logo">X<b>·</b>BIN  ·  HMI 7" TOUCH</div>
+  <div class="bezel-leds">
+    <div class="bezel-led on" title="Power"></div>
+    <div class="bezel-led amber" id="led-busy" title="Busy"></div>
+    <div class="bezel-led red" id="led-alarm" title="Alarm"></div>
+  </div>
+  <div class="screen">
+
+    <!-- STATUS BAR -->
+    <header class="status-bar">
+      <div class="sb-left">
+        <div class="sb-brand">
+          <div class="sb-brand-mark">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6M14 11v6"/></svg>
+          </div>
+          <div class="sb-brand-text">X<b>·</b>BIN</div>
+        </div>
+        <div class="sb-divider"></div>
+        <div class="sb-meta" id="sb-page-name">Trang chủ</div>
+      </div>
+      <div class="sb-right">
+        <div class="sb-icon" id="sb-link" title="Backend"><svg viewBox="0 0 24 24"><path d="M2 12h6l3-9 4 18 3-9h4"/></svg><span id="sb-link-t">CONNECTING</span></div>
+        <div class="sb-icon" id="sb-hw" title="Hardware mode"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span id="sb-hw-t">?</span></div>
+        <div class="sb-icon"><div class="conn-bar" id="sb-bars"><span></span><span></span><span></span><span></span></div></div>
+        <div class="sb-divider"></div>
+        <div class="sb-clock" id="sb-clock">--:--:--</div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="content">
+
+      <!-- HOME -->
+      <section class="page active" data-page="home">
+        <div class="page-head">
+          <div class="page-title"><small>Dashboard</small>Tổng quan hệ thống</div>
+          <div class="page-action">
+            <button class="btn btn-ghost" onclick="goto('log')"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h12"/></svg>Nhật ký</button>
+          </div>
+        </div>
+        <div class="home-grid">
+          <div class="bin-tile" onclick="goto('bin1')">
+            <div class="bt-head">
+              <div><div class="bt-type">Compartment · 01</div><div class="bt-name">Ngăn Vô Cơ</div></div>
+              <div class="bt-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v6H5z"/><path d="M7 9v12h10V9"/><path d="M9 13h6"/></svg></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge" data-s="ready" id="home-s1"><span class="dot"></span><span class="t">Ready</span></span>
+              <span style="font-size:10px;color:var(--text-3);letter-spacing:0.12em;text-transform:uppercase;">Touch để vào →</span>
+            </div>
+            <!-- 3 metric: Loadcell + Mức đầy + Nước rửa (tank của ngăn vô cơ) -->
+            <div class="bt-metrics" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="bt-metric"><div class="bt-metric-l">Loadcell</div><div class="bt-metric-v"><span id="home-m1f">0.00</span> kgf</div></div>
+              <div class="bt-metric"><div class="bt-metric-l">Mức đầy</div><div class="bt-metric-v" id="home-m1fill">LOW</div></div>
+              <div class="bt-metric"><div class="bt-metric-l">Nước rửa</div><div class="bt-metric-v" id="home-water">HIGH</div></div>
+            </div>
+          </div>
+          <div class="bin-tile" onclick="goto('bin2')">
+            <div class="bt-head">
+              <div><div class="bt-type">Compartment · 02</div><div class="bt-name">Ngăn Hữu Cơ</div></div>
+              <div class="bt-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-1.5 4-5 5-5 10a5 5 0 0 0 10 0c0-5-3.5-6-5-10z"/></svg></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge" data-s="ready" id="home-s2"><span class="dot"></span><span class="t">Ready</span></span>
+              <span style="font-size:10px;color:var(--text-3);letter-spacing:0.12em;text-transform:uppercase;">Touch để vào →</span>
+            </div>
+            <!-- 3 metric: Mức đầy + Chế độ + Vi sinh (tank của ngăn hữu cơ) -->
+            <div class="bt-metrics" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="bt-metric"><div class="bt-metric-l">Mức đầy</div><div class="bt-metric-v" id="home-m2fill">LOW</div></div>
+              <div class="bt-metric"><div class="bt-metric-l">Chế độ</div><div class="bt-metric-v" id="home-m2mode">MANUAL</div></div>
+              <div class="bt-metric"><div class="bt-metric-l">Vi sinh</div><div class="bt-metric-v" id="home-bio">HIGH</div></div>
+            </div>
+          </div>
+          <div class="quick-bar">
+            <button class="tbtn" onclick="emergencyStop()"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg><span class="tbtn-label">E-Stop</span></button>
+            <button class="tbtn" onclick="goto('settings')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg><span class="tbtn-label">Cài đặt</span></button>
+            <button class="tbtn" onclick="goto('log')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="tbtn-label">Nhật ký</span></button>
+            <button class="tbtn" onclick="goto('system')"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4"/></svg><span class="tbtn-label">Hệ thống</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- BIN 1 -->
+      <section class="page" data-page="bin1">
+        <div class="page-head">
+          <div class="page-title"><small>Compartment · 01</small>Ngăn Vô Cơ</div>
+          <div class="page-action"><span class="badge" data-s="ready" id="b1-state"><span class="dot"></span><span class="t">Ready</span></span></div>
+        </div>
+        <div class="bin-layout">
+          <div><div class="panel">
+            <div class="panel-title">Cảm biến · Realtime</div>
+            <!-- bỏ % chu kỳ, để gauge loadcell ở giữa cho thoáng -->
+            <div style="display:flex;justify-content:center;align-items:center;">
+              <div class="gauge-wrap">
+                <div class="gauge">
+                  <svg viewBox="0 0 200 200">
+                    <circle class="gauge-arc-bg" cx="100" cy="100" r="85" stroke-dasharray="267 534"/>
+                    <circle class="gauge-arc-fill" id="b1-gauge" cx="100" cy="100" r="85" stroke-dasharray="267 534" stroke-dashoffset="267"/>
+                  </svg>
+                  <div class="gauge-value"><span id="b1-force">0.0</span><small> kgf</small></div>
+                </div>
+                <div class="gauge-l">Loadcell</div>
+              </div>
+            </div>
+            <div class="led-row" style="margin-top:14px;">
+              <div class="led-item"><div class="led" id="b1-led-pos-dot"></div><div class="led-item-name">Vị trí motor ép</div><div class="led-item-val" id="b1-pos">HOME</div></div>
+              <div class="led-item"><div class="led" id="b1-led-pump-dot"></div><div class="led-item-name">Bơm phun nước</div><div class="led-item-val" id="b1-pump">OFF</div></div>
+              <div class="led-item"><div class="led on green"></div><div class="led-item-name">Công tắc hành trình</div><div class="led-item-val">OK</div></div>
+            </div>
+          </div></div>
+          <div><div class="panel">
+            <div class="panel-title">Quy trình xử lý</div>
+            <div class="steps" id="b1-steps">
+              <div class="step" data-step="press"><div class="step-num">1</div><div class="step-name">Ép nén rác</div><div class="step-status">Idle</div></div>
+              <div class="step" data-step="return"><div class="step-num">2</div><div class="step-name">Hồi vị cơ cấu</div><div class="step-status">Idle</div></div>
+              <div class="step" data-step="spray"><div class="step-num">3</div><div class="step-name">Phun nước rửa</div><div class="step-status">Idle</div></div>
+            </div>
+            <div class="ctrl-pad">
+              <button class="btn btn-primary" id="b1-start"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z"/></svg> Start</button>
+              <button class="btn btn-ghost" id="b1-stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg> Stop</button>
+              <button class="btn btn-ghost" id="b1-reset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> Reset</button>
+            </div>
+          </div></div>
+        </div>
+      </section>
+
+      <!-- BIN 2 -->
+      <section class="page" data-page="bin2">
+        <div class="page-head">
+          <div class="page-title"><small>Compartment · 02</small>Ngăn Hữu Cơ</div>
+          <div class="page-action"><span class="badge" data-s="ready" id="b2-state"><span class="dot"></span><span class="t">Ready</span></span></div>
+        </div>
+        <div class="bin-layout">
+          <div><div class="panel">
+            <div class="panel-title">Cảm biến · Realtime</div>
+            <!-- bỏ % chu kỳ, để gauge rpm ở giữa cho gọn -->
+            <div style="display:flex;justify-content:center;align-items:center;">
+              <div class="gauge-wrap">
+                <div class="gauge">
+                  <svg viewBox="0 0 200 200">
+                    <circle class="gauge-arc-bg" cx="100" cy="100" r="85" stroke-dasharray="267 534"/>
+                    <circle class="gauge-arc-fill" id="b2-gauge" cx="100" cy="100" r="85" stroke-dasharray="267 534" stroke-dashoffset="267"/>
+                  </svg>
+                  <div class="gauge-value"><span id="b2-rpm">0</span><small> rpm</small></div>
+                </div>
+                <div class="gauge-l">Tốc độ dao cắt</div>
+              </div>
+            </div>
+            <div class="led-row" style="margin-top:14px;">
+              <div class="led-item"><div class="led" id="b2-led-sense-dot"></div><div class="led-item-name">Cảm biến rác (IR)</div><div class="led-item-val" id="b2-sense">CLEAR</div></div>
+              <div class="led-item"><div class="led" id="b2-led-bio-dot"></div><div class="led-item-name">Bơm vi sinh</div><div class="led-item-val" id="b2-bio">OFF</div></div>
+              <div class="led-item"><div class="led" id="b2-led-door-dot"></div><div class="led-item-name">Cửa lật xả</div><div class="led-item-val" id="b2-door">CLOSED</div></div>
+            </div>
+          </div></div>
+          <div><div class="panel">
+            <div class="panel-title">Quy trình xử lý</div>
+            <div class="steps" id="b2-steps">
+              <div class="step" data-step="cut"><div class="step-num">1</div><div class="step-name">Cắt nhỏ rác</div><div class="step-status">Idle</div></div>
+              <div class="step" data-step="bio"><div class="step-num">2</div><div class="step-name">Phun vi sinh</div><div class="step-status">Idle</div></div>
+              <div class="step" data-step="door"><div class="step-num">3</div><div class="step-name">Mở cửa lật xả</div><div class="step-status">Idle</div></div>
+            </div>
+            <div class="panel" style="margin-top:14px;background:rgba(0,0,0,0.18);">
+              <div class="panel-title">Chế độ khởi động</div>
+              <div class="mode-toggle" id="mode-2" style="width:100%;display:flex;">
+                <button data-mode="manual" class="active" style="flex:1;">Manual</button>
+                <button data-mode="auto" style="flex:1;">Auto · 5s</button>
+              </div>
+            </div>
+            <div class="ctrl-pad">
+              <button class="btn btn-primary" id="b2-start"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z"/></svg> Start</button>
+              <button class="btn btn-ghost" id="b2-stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg> Stop</button>
+              <button class="btn btn-ghost" id="b2-reset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> Reset</button>
+            </div>
+          </div></div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="page" data-page="settings">
+        <div class="page-head">
+          <div class="page-title"><small>Configuration</small>Cài đặt thông số</div>
+          <div class="page-action"><button class="btn btn-success" onclick="toast('Đã lưu cấu hình')"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Lưu</button></div>
+        </div>
+        <div class="row-2">
+          <div class="panel">
+            <div class="panel-title">Ngăn Vô Cơ · 01</div>
+            <div class="set-list">
+              <!-- đổi ngưỡng lực ép sang % cho người dùng dễ hình dung (0-100%) -->
+              <div class="set-row"><div class="set-l">Ngưỡng lực ép <small>% so với lực ép tối đa</small></div>
+                <div class="stepper"><button data-set="bin1.press_threshold_pct" data-dir="-5" data-min="20" data-max="100">−</button><div class="stepper-v" id="set-bin1-press_threshold_pct">60 %</div><button data-set="bin1.press_threshold_pct" data-dir="5" data-min="20" data-max="100">+</button></div>
+              </div>
+              <div class="set-row"><div class="set-l">Thời gian phun rửa <small>Sau khi hồi vị</small></div>
+                <div class="stepper"><button data-set="bin1.spray_seconds" data-dir="-1" data-min="1" data-max="10">−</button><div class="stepper-v" id="set-bin1-spray_seconds">3 s</div><button data-set="bin1.spray_seconds" data-dir="1" data-min="1" data-max="10">+</button></div>
+              </div>
+              <!-- bỏ timeout ép tối đa theo yêu cầu -->
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Ngăn Hữu Cơ · 02</div>
+            <div class="set-list">
+              <div class="set-row"><div class="set-l">Chế độ khởi động</div>
+                <div class="mode-toggle" id="set-mode-2"><button data-mode="manual" class="active">Manual</button><button data-mode="auto">Auto · 5s</button></div>
+              </div>
+              <!-- Mega chỉ chấp nhận 1/3/5 phút → stepper jump 2 (1 → 3 → 5) -->
+              <div class="set-row"><div class="set-l">Thời gian cắt <small>Phút (1 / 3 / 5)</small></div>
+                <div class="stepper"><button data-set="bin2.cut_minutes" data-dir="-2" data-min="1" data-max="5">−</button><div class="stepper-v" id="set-bin2-cut_minutes">1 ph</div><button data-set="bin2.cut_minutes" data-dir="2" data-min="1" data-max="5">+</button></div>
+              </div>
+              <div class="set-row"><div class="set-l">Thời gian phun vi sinh</div>
+                <div class="stepper"><button data-set="bin2.bio_seconds" data-dir="-1" data-min="1" data-max="8">−</button><div class="stepper-v" id="set-bin2-bio_seconds">2 s</div><button data-set="bin2.bio_seconds" data-dir="1" data-min="1" data-max="8">+</button></div>
+              </div>
+              <!-- bỏ thời gian giữ cửa lật theo yêu cầu, dùng default 4s trong DemoCtl -->
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:14px;">
+          <div class="panel-title">Tùy chọn hệ thống</div>
+          <div class="set-list">
+            <!-- bỏ cảnh báo âm thanh + chế độ demo theo yêu cầu, giữ lại 2 option an toàn -->
+            <div class="set-row"><div class="set-l">Khóa an toàn nắp <small>Ngừng khi nắp mở</small></div><label class="switch"><input type="checkbox" data-opt="lock" checked><span class="switch-slider"></span></label></div>
+            <div class="set-row"><div class="set-l">Cảnh báo hết dung dịch <small>≤ 15%</small></div><label class="switch"><input type="checkbox" data-opt="warn" checked><span class="switch-slider"></span></label></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOG -->
+      <section class="page" data-page="log">
+        <div class="page-head">
+          <div class="page-title"><small>Event Log</small>Nhật ký vận hành</div>
+          <div class="page-action"><button class="btn btn-ghost" id="log-clear"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Xóa</button></div>
+        </div>
+        <div class="panel" style="padding:0;overflow:hidden;">
+          <div class="log-wrap">
+            <table class="log-table">
+              <thead><tr><th style="width:80px;">Thời gian</th><th style="width:24px;"></th><th style="width:80px;">Nguồn</th><th>Sự kiện</th></tr></thead>
+              <tbody id="log-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SYSTEM -->
+      <section class="page" data-page="system">
+        <div class="page-head">
+          <div class="page-title"><small>Diagnostics</small>Thông tin hệ thống</div>
+          <div class="page-action"><button class="btn btn-ghost" onclick="location.reload()"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> Reload</button></div>
+        </div>
+        <div class="sys-grid">
+          <!-- thông tin phần cứng — bỏ uptime, total cycles, backend, uart theo yêu cầu -->
+          <div class="sys-card"><div class="sys-card-l">Controller (HMI)</div><div class="sys-card-v">Q509 · Ubuntu 22.04</div></div>
+          <div class="sys-card"><div class="sys-card-l">Micro Controller</div><div class="sys-card-v">Arduino Mega 2560 R3</div></div>
+          <div class="sys-card"><div class="sys-card-l">CPU Temp</div><div class="sys-card-v"><span id="sys-cpu">—</span><small>°C</small></div></div>
+          <div class="sys-card"><div class="sys-card-l">Sensors</div><div class="sys-card-v">All Online <small>4/4</small></div></div>
+        </div>
+        <div class="emergency" onclick="emergencyStop()">
+          <div class="emergency-l">⏻  EMERGENCY STOP</div>
+          <div class="emergency-s">Nhấn để dừng khẩn cấp toàn bộ hệ thống</div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- NAV -->
+    <nav class="nav">
+      <button class="nav-item active" data-nav="home"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>Trang chủ</button>
+      <button class="nav-item" data-nav="bin1"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v6H5z"/><path d="M7 9v12h10V9"/></svg>Vô cơ</button>
+      <button class="nav-item" data-nav="bin2"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-1.5 4-5 5-5 10a5 5 0 0 0 10 0c0-5-3.5-6-5-10z"/></svg>Hữu cơ</button>
+      <button class="nav-item" data-nav="settings"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>Cài đặt</button>
+      <button class="nav-item" data-nav="log"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Nhật ký<span class="nav-badge" id="nav-badge" style="display:none;">0</span></button>
+      <button class="nav-item" data-nav="system"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4"/></svg>Hệ thống</button>
+    </nav>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Socket.IO client -->
+<script src="/socket.io.min.js" onerror="this.onerror=null;this.src='https://cdn.socket.io/4.7.5/socket.io.min.js'"></script>
+
+<script>
+/* =========================================================================
+   X-BIN HMI · JS frontend
+   ----------------------
+   note: trang giao tiếp với backend Flask qua socket.io
+         nếu socket không có thì rơi xuống chạy DemoCtl (giả lập dữ liệu)
+         để giao diện vẫn chạy bình thường khi demo offline
+   ========================================================================= */
+
+// shortcut hay dùng — viết tắt cho gọn
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+
+/* ----- chế độ kiosk =====
+   thêm class .kiosk vào body để CSS bung fullscreen, ẩn bezel giả
+   2 trường hợp:
+   - browser ở chế độ fullscreen + màn đủ to → tự bật
+   - url có ?kiosk=1 → bắt buộc bật (cho Chromium --kiosk) */
+if (window.innerWidth >= 1200 && window.innerHeight >= 600 &&
+    window.matchMedia('(display-mode: fullscreen)').matches) {
+  document.body.classList.add('kiosk');
+}
+if (new URLSearchParams(location.search).get('kiosk') === '1') {
+  document.body.classList.add('kiosk');
+}
+
+/* ----- chuyển trang (router) -----
+   không dùng framework, chỉ ẩn/hiện .page bằng class .active
+   sb-page-name là chữ nhỏ trên thanh status để biết đang ở trang nào */
+const PAGE_NAMES = { home:'Trang chủ', bin1:'Ngăn Vô Cơ', bin2:'Ngăn Hữu Cơ',
+                     settings:'Cài đặt', log:'Nhật ký', system:'Hệ thống' };
+let logUnread = 0;
+function updateLogBadge() {
+  const b = $('nav-badge');
+  if (logUnread > 0) { b.style.display=''; b.textContent = logUnread; } else { b.style.display='none'; }
+}
+function goto(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.dataset.page===page));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.nav===page));
+  $('sb-page-name').textContent = PAGE_NAMES[page] || '—';
+  // khi click sang trang nhật ký thì xoá badge "log unread"
+  if (page === 'log') { logUnread = 0; updateLogBadge(); }
+}
+document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => goto(n.dataset.nav)));
+
+/* ----- toast (popup nhỏ ở đáy) -----
+   tự ẩn sau 1.8s, dùng timer để hủy timer cũ nếu spam nhiều toast */
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ----- đồng hồ -----
+   chỉ hiện giờ:phút:giây trên status bar
+   uptime cũ đã bỏ khỏi trang Hệ thống → không cập nhật nữa */
+let serverStartTime = Date.now();
+function updateClock() {
+  const d = new Date();
+  $('sb-clock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* ----- nhật ký sự kiện -----
+   thêm dòng mới lên đầu bảng để event mới nhất luôn ở trên
+   giới hạn 80 dòng cho khỏi tốn RAM
+   nếu đang không ở trang Nhật ký thì tăng badge unread */
+const ICONS = { info:'i', success:'✓', warn:'!', error:'×' };
+function addLog(time, type, source, msg) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="lt-time">${time}</td>
+                  <td><span class="lt-icon ${type}">${ICONS[type]||'i'}</span></td>
+                  <td class="lt-bin">${source||'SYS'}</td>
+                  <td class="lt-msg">${msg}</td>`;
+  const tbody = $('log-body');
+  tbody.insertBefore(tr, tbody.firstChild);
+  while (tbody.children.length > 80) tbody.removeChild(tbody.lastChild);
+  const onLog = document.querySelector('.page[data-page="log"]').classList.contains('active');
+  if (!onLog) { logUnread++; updateLogBadge(); }
+}
+// shortcut: log với thời gian hiện tại
+function log(msg, type='info', source='SYS') {
+  const d = new Date();
+  addLog(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`, type, source, msg);
+}
+$('log-clear').addEventListener('click', () => { $('log-body').innerHTML = ''; log('Đã xóa nhật ký', 'info'); });
+
+/* ----- helper cho UI -----
+   setBadge: đổi trạng thái badge (Ready/Running/Done/Error) cho từng ngăn
+   led:      bật/tắt đèn LED ảo trên trang điều khiển */
+function setBadge(id, s) {
+  const map = { ready:'Ready', running:'Running', done:'Done', error:'Error' };
+  const el = $(id); if (!el) return;
+  el.dataset.s = s; el.querySelector('.t').textContent = map[s] || s;
+}
+function led(id, on, color='') {
+  const el = $(id); if (!el) return;
+  el.className = 'led'; if (on) { el.classList.add('on'); if (color) el.classList.add(color); }
+}
+
+// dung dịch: backend gửi 100 (OK) hoặc 10 (LOW) → render HIGH/LOW + đổi màu
+function updateLiquid(id, val) {
+  const el = $(id); if (!el) return;
+  const isHigh = val >= 50;
+  el.textContent = isHigh ? 'HIGH' : 'LOW';
+  el.style.color = isHigh ? 'var(--success)' : 'var(--danger)';
+}
+
+// Mức đầy thùng rác (JSN-SR04T):
+// Backend phát {"type":"fill", "bin":1|2, "state":"high"|"low"|"checking"}
+//   high     -> "HIGH" (đỏ, cần đổ rác)   tương ứng Mega "FULL"
+//   low      -> "LOW"  (xanh, chưa đầy)   tương ứng Mega "OK"
+//   checking -> "..."  (xám, đang đo)     tương ứng Mega "CHECKING"
+function updateFill(id, state) {
+  const el = $(id); if (!el) return;
+  if (state === 'high') {
+    el.textContent = 'HIGH';
+    el.style.color = 'var(--danger)';
+  } else if (state === 'low') {
+    el.textContent = 'LOW';
+    el.style.color = 'var(--success)';
+  } else {
+    el.textContent = '...';
+    el.style.color = 'var(--text-3)';
+  }
+}
+
+// state global cho cảm biến IR ngăn hữu cơ — render phụ thuộc mode2 + sense
+let _lastSense = 'clear';
+let _currentMode2 = 'manual';
+function renderIRSensor() {
+  const valEl = $('b2-sense');
+  if (_currentMode2 === 'manual') {
+    // Manual: cảm biến không hoạt động — LED off, text OFF
+    if (valEl) valEl.textContent = 'OFF';
+    led('b2-led-sense-dot', false);
+  } else {
+    // Auto: LED luôn sáng, đỏ khi chưa thấy vật, xanh khi thấy
+    if (_lastSense === 'detect') {
+      if (valEl) valEl.textContent = 'DETECT';
+      led('b2-led-sense-dot', true, 'green');
+    } else {
+      if (valEl) valEl.textContent = 'CLEAR';
+      led('b2-led-sense-dot', true, 'red');
+    }
+  }
+}
+function setStep(binId, stepName, status) {
+  const item = document.querySelector(`#b${binId}-steps [data-step="${stepName}"]`);
+  if (!item) return;
+  item.classList.remove('active','done');
+  if (status === 'active') item.classList.add('active');
+  if (status === 'done') item.classList.add('done');
+  const map = { active:'Running', done:'Done', idle:'Idle' };
+  item.querySelector('.step-status').textContent = map[status] || status.toUpperCase();
+}
+function resetSteps(binId, names) { names.forEach(n => setStep(binId, n, 'idle')); }
+
+// đã bỏ % chu kỳ ở 2 trang vô cơ/hữu cơ, để hàm rỗng để các chỗ gọi cũ không lỗi
+function setProgress(binId, pct) { /* no-op */ }
+
+// gauge loadcell — convert kgf sang góc arc (max 30 kgf ~ trục bán nguyệt 267px)
+function setGauge1(force) {
+  const max = 30, len = 267, ratio = Math.min(1, force/max);
+  const g = $('b1-gauge'); if (g) g.setAttribute('stroke-dashoffset', (len - ratio*len).toFixed(2));
+  const f = $('b1-force'); if (f) f.textContent = Number(force).toFixed(1);
+  const hm = $('home-m1f'); if (hm) hm.textContent = Number(force).toFixed(2);
+}
+// gauge tốc độ dao cắt
+function setGauge2(rpm) {
+  const max = 1800, len = 267, ratio = Math.min(1, rpm/max);
+  const g = $('b2-gauge'); if (g) g.setAttribute('stroke-dashoffset', (len - ratio*len).toFixed(2));
+  const r = $('b2-rpm'); if (r) r.textContent = Math.round(rpm);
+}
+
+/* ----- chỉ báo trạng thái kết nối backend -----
+   4 state: online (xanh), connecting (vàng), offline (đỏ), demo (vàng + tag DEMO)
+   khi offline thì làm mờ icon "sóng" cho thấy mất link */
+function setConn(state) {
+  const link = $('sb-link'), t = $('sb-link-t'), bars = $('sb-bars');
+  link.classList.remove('ok','warn','err');
+  bars.classList.remove('offline');
+  if (state === 'online')      { link.classList.add('ok');  t.textContent = 'ONLINE'; }
+  else if (state === 'connecting') { link.classList.add('warn'); t.textContent = 'CONNECTING'; bars.classList.add('offline'); }
+  else if (state === 'offline')    { link.classList.add('err'); t.textContent = 'OFFLINE'; bars.classList.add('offline'); }
+  else                         { link.classList.add('warn'); t.textContent = 'DEMO'; bars.classList.add('offline'); }
+}
+let _mockWarned = false;
+function setHwMode(mode, connected) {
+  // hiện badge trên status bar (UART thật / MOCK)
+  const map = { uart: 'UART', mock: 'MOCK', '?': '?' };
+  const tt = $('sb-hw-t');
+  if (tt) {
+    // MOCK = backend KHÔNG mở được serial tới Mega → máy thật KHÔNG chạy.
+    // Làm badge đỏ + chữ rõ để không nhầm với điều khiển thật.
+    tt.textContent = mode === 'mock' ? 'MOCK · MÁY KHÔNG CHẠY' : (map[mode] || mode);
+    tt.style.color      = mode === 'mock' ? '#fff'    : '';
+    tt.style.background = mode === 'mock' ? '#dc2626' : '';
+    tt.style.padding    = mode === 'mock' ? '1px 6px' : '';
+    tt.style.borderRadius = mode === 'mock' ? '6px'   : '';
+    tt.style.fontWeight = mode === 'mock' ? '700'     : '';
+  }
+  // Cảnh báo 1 lần qua nhật ký + toast khi phát hiện đang chạy giả lập.
+  if (mode === 'mock' && !_mockWarned) {
+    _mockWarned = true;
+    log('CHẾ ĐỘ MOCK: backend KHÔNG mở được cổng serial tới Mega — UI chỉ chạy giả lập, máy thật sẽ KHÔNG hoạt động. Kiểm tra cổng/quyền truy cập serial.', 'error', 'SYS');
+    if (typeof toast === 'function') toast('⚠ MOCK — máy thật không chạy (serial chưa kết nối)');
+  }
+  if (mode === 'uart') _mockWarned = false;
+  // sys-hw-mode + sys-uart đã bị bỏ khỏi trang Hệ thống — kiểm tra trước khi set
+  if ($('sys-hw-mode')) $('sys-hw-mode').textContent = (mode || '—').toUpperCase();
+  if ($('sys-uart')) $('sys-uart').innerHTML = mode === 'uart'
+    ? `9600 8N1 <small>OK</small>`
+    : `MOCK <small>chưa mở được serial</small>`;
+}
+
+/* =========================================================================
+   2 controller — Remote (qua socket) / Demo (chạy local cho UI khỏi đứng)
+   tách ra cho clean code, button click chỉ gọi controller.xxx() là xong
+   ========================================================================= */
+let controller = null;     // sẽ được trỏ tới 1 trong 2: RemoteCtl / DemoCtl
+let socket = null;
+let isOnline = false;
+
+/* ===== Remote controller — gọi backend qua socket.io ===== */
+const RemoteCtl = {
+  start(bin) { socket.emit('cmd', {action: 'start', bin}); },
+  stop(bin)  { socket.emit('cmd', {action: 'stop', bin}); },
+  reset(bin) { socket.emit('cmd', {action: 'reset', bin}); },
+  estop()    { socket.emit('cmd', {action: 'estop'}); },
+  setParam(bin, key, value) { socket.emit('cmd', {action: 'set', bin, key, value}); },
+  setMode(mode) { socket.emit('cmd', {action: 'set_mode', bin: 2, mode}); },
+  setOption(key, value) { socket.emit('cmd', {action: 'set_option', key, value}); },
+};
+
+/* ===== Demo controller (fallback) =====
+   khi backend chưa lên / chưa nối MCU, mình tự sinh dữ liệu cho UI chạy demo
+   --- ngưỡng lực ép chuyển sang dạng % cho người dùng dễ hiểu hơn ---
+   (max kgf giả định = 30, threshold % chuyển ra kgf để vẽ gauge cho khớp) */
+const DemoCtl = (() => {
+  const running = {1:false, 2:false}, stopFlag = {1:false, 2:false};
+  let cycles = 0;
+  const params = {
+    // press_threshold_pct: % của lực ép max — mặc định 60% (max giả định = 30 kgf → 18 kgf)
+    1: {press_threshold_pct: 60, spray_seconds: 3},
+    // cut_minutes phải khớp với Mega — chỉ 1/3/5 phút
+    // mock thu nhỏ xuống ~5s/phút để demo nhanh, mega thật thì đúng phút
+    2: {cut_minutes: 1, bio_seconds: 2, door_seconds: 4, mode: 'manual'},
+  };
+  // tiện hàm convert % → kgf để vẽ gauge giả lập
+  const pctToKgf = pct => (pct / 100) * 30;
+
+  async function run(bin, steps) {
+    if (running[bin]) return;
+    running[bin] = true; stopFlag[bin] = false;
+    setBadge(`b${bin}-state`,'running'); setBadge(`home-s${bin}`,'running');
+    $('led-busy').classList.add('on');
+    log('Bắt đầu chu kỳ (DEMO)', 'info', `BIN-0${bin}`);
+    resetSteps(bin, steps.map(s=>s.n));
+    const total = steps.reduce((a,b)=>a+b.d,0); let elapsed=0;
+    for (const s of steps) {
+      if (stopFlag[bin]) break;
+      setStep(bin, s.n, 'active');
+      const t0 = Date.now();
+      while (Date.now()-t0 < s.d*1000) {
+        if (stopFlag[bin]) break;
+        const se = (Date.now()-t0)/1000;
+        // bin 1: giả lập loadcell tăng/giảm theo bước
+        if (bin===1) {
+          const thKgf = pctToKgf(params[1].press_threshold_pct);
+          if (s.n==='press')  { setGauge1(Math.min(thKgf, (se/s.d)*thKgf + Math.random()*0.6)); $('b1-pos').textContent='EXTEND'; led('b1-led-pos-dot', true); led('b1-led-pump-dot', false); }
+          else if (s.n==='return') { setGauge1(Math.max(0, thKgf - (se/s.d)*thKgf)); $('b1-pos').textContent='RETRACT'; led('b1-led-pos-dot', true); }
+          else { $('b1-pos').textContent='HOME'; $('b1-pump').textContent='ON'; led('b1-led-pump-dot', true, 'cyan'); led('b1-led-pos-dot', false); }
+        } else {
+          // bin 2: giả rpm + state ngăn hữu cơ
+          if (s.n==='cut') { setGauge2(1200+Math.random()*200); $('b2-sense').textContent='OBJECT'; led('b2-led-sense-dot', true, 'red'); }
+          else if (s.n==='bio') { setGauge2(0); $('b2-bio').textContent='ON'; led('b2-led-bio-dot', true, 'cyan'); led('b2-led-sense-dot', false); }
+          else { $('b2-door').textContent='OPEN'; $('b2-bio').textContent='OFF'; led('b2-led-bio-dot', false); led('b2-led-door-dot', true, 'green'); }
+        }
+        await new Promise(r=>setTimeout(r, 70));
+      }
+      if (stopFlag[bin]) break;
+      setStep(bin, s.n, 'done'); elapsed += s.d;
+    }
+    // hết chu kỳ → cleanup các giá trị về mặc định
+    if (bin===1) { setGauge1(0); $('b1-pos').textContent='HOME'; $('b1-pump').textContent='OFF'; led('b1-led-pos-dot', false); led('b1-led-pump-dot', false); }
+    else { setGauge2(0); $('b2-sense').textContent='CLEAR'; $('b2-bio').textContent='OFF'; $('b2-door').textContent='CLOSED'; led('b2-led-sense-dot', false); led('b2-led-bio-dot', false); led('b2-led-door-dot', false); }
+    if (!stopFlag[bin]) {
+      setBadge(`b${bin}-state`,'done'); setBadge(`home-s${bin}`,'done');
+      cycles++;  // (không hiện trên UI nữa, vẫn đếm để toast/log có context)
+      toast(`BIN-0${bin} · Chu kỳ hoàn tất`);
+      setTimeout(()=>{ setBadge(`b${bin}-state`,'ready'); setBadge(`home-s${bin}`,'ready'); resetSteps(bin, steps.map(s=>s.n)); }, 2400);
+    } else {
+      setBadge(`b${bin}-state`,'ready'); setBadge(`home-s${bin}`,'ready'); resetSteps(bin, steps.map(s=>s.n));
+    }
+    running[bin] = false;
+    if (!running[1] && !running[2]) $('led-busy').classList.remove('on');
+  }
+  return {
+    params,
+    start(bin) {
+      if (bin===1) run(1, [{n:'press',d:4},{n:'return',d:2},{n:'spray',d:params[1].spray_seconds}]);
+      // demo: cắt giả lập = cut_minutes × 5 giây (cho nhanh, khỏi đợi 1 phút thật)
+      else run(2, [{n:'cut',d:params[2].cut_minutes*5},{n:'bio',d:params[2].bio_seconds},{n:'door',d:params[2].door_seconds}]);
+    },
+    stop(bin)  { if (running[bin]) { stopFlag[bin]=true; log('Dừng thủ công', 'warn', `BIN-0${bin}`); } },
+    reset(bin) { stopFlag[bin]=true; running[bin]=false; setBadge(`b${bin}-state`,'ready'); setBadge(`home-s${bin}`,'ready');
+      if (bin===1) { resetSteps(1,['press','return','spray']); setGauge1(0); $('b1-pos').textContent='HOME'; $('b1-pump').textContent='OFF'; led('b1-led-pos-dot',false); led('b1-led-pump-dot',false); }
+      else { resetSteps(2,['cut','bio','door']); setGauge2(0); $('b2-sense').textContent='CLEAR'; $('b2-bio').textContent='OFF'; $('b2-door').textContent='CLOSED'; led('b2-led-sense-dot',false); led('b2-led-bio-dot',false); led('b2-led-door-dot',false); }
+      log('Reset chu kỳ', 'info', `BIN-0${bin}`); },
+    estop() {
+      stopFlag[1]=true; stopFlag[2]=true; running[1]=false; running[2]=false;
+      setBadge('b1-state','error'); setBadge('home-s1','error');
+      setBadge('b2-state','error'); setBadge('home-s2','error');
+      resetSteps(1,['press','return','spray']); resetSteps(2,['cut','bio','door']);
+      setGauge1(0); setGauge2(0);
+      $('b1-pos').textContent='HOME'; $('b1-pump').textContent='OFF';
+      $('b2-sense').textContent='CLEAR'; $('b2-bio').textContent='OFF'; $('b2-door').textContent='CLOSED';
+      ['b1-led-pos-dot','b1-led-pump-dot','b2-led-sense-dot','b2-led-bio-dot','b2-led-door-dot'].forEach(i => led(i, false));
+      $('led-alarm').classList.add('on');
+      log('EMERGENCY STOP', 'error'); toast('⏻  EMERGENCY STOP');
+      setTimeout(()=>{ setBadge('b1-state','ready'); setBadge('home-s1','ready'); setBadge('b2-state','ready'); setBadge('home-s2','ready'); $('led-alarm').classList.remove('on'); }, 3500);
+    },
+    setParam(bin, key, value) { if (params[bin] && key in params[bin]) params[bin][key] = value; },
+    setMode(mode) { params[2].mode = mode; $('home-m2mode').textContent = mode.toUpperCase(); },
+    setOption() {},
+  };
+})();
+
+/* ===== Wire up buttons ===== */
+function emergencyStop() { controller.estop(); }
+$('b1-start').addEventListener('click', () => controller.start(1));
+$('b1-stop').addEventListener('click',  () => controller.stop(1));
+$('b1-reset').addEventListener('click', () => controller.reset(1));
+$('b2-start').addEventListener('click', () => controller.start(2));
+$('b2-stop').addEventListener('click',  () => controller.stop(2));
+$('b2-reset').addEventListener('click', () => controller.reset(2));
+
+/* ===== Steppers (nút +/-) =====
+   mỗi nút có data-set="binX.key", data-dir, data-min, data-max
+   key đặt tên có hậu tố để biết đơn vị: _pct → %, _kgf → kgf, _seconds → s
+   khởi tạo state khớp với giá trị mặc định trong HTML để khỏi nhảy về 0 lần đầu bấm */
+const stepperState = {
+  'bin1.press_threshold_pct': 60,
+  'bin1.spray_seconds': 3,
+  // bin2.cut_minutes — chỉ 1/3/5 phút (Mega 2560 chỉ chấp nhận 3 giá trị này)
+  'bin2.cut_minutes': 1,
+  'bin2.bio_seconds': 2,
+  // door_seconds đã bỏ khỏi UI, dùng default 4s ở Mega/Mock
+};
+function fmtStepper(key, val) {
+  // chọn đơn vị hiển thị theo hậu tố của key
+  let unit = '';
+  if (key.endsWith('_pct')) unit = '%';
+  else if (key.endsWith('_kgf')) unit = 'kgf';
+  else if (key.endsWith('_seconds')) unit = 's';
+  else if (key.endsWith('_minutes')) unit = 'ph';
+  return `${val} ${unit}`.trim();
+}
+document.querySelectorAll('.stepper button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const path = btn.dataset.set; if (!path) return;
+    const [bkey, key] = path.split('.');
+    const dir = parseInt(btn.dataset.dir, 10);
+    const min = parseFloat(btn.dataset.min), max = parseFloat(btn.dataset.max);
+    const cur = stepperState[path] ?? 0;
+    const next = Math.max(min, Math.min(max, cur + dir));
+    if (next === cur) return;
+    stepperState[path] = next;
+    $(`set-${bkey}-${key}`).textContent = fmtStepper(key, next);
+    const bin = parseInt(bkey.replace('bin',''), 10);
+    controller.setParam(bin, key, next);
+  });
+});
+
+/* ===== Mode toggle ===== */
+function setModeUI(mode) {
+  ['mode-2','set-mode-2'].forEach(id => {
+    const el = $(id); if (!el) return;
+    el.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  });
+  $('home-m2mode').textContent = mode.toUpperCase();
+  // cập nhật state cho cảm biến IR + re-render
+  _currentMode2 = mode;
+  renderIRSensor();
+}
+document.querySelectorAll('#mode-2 button, #set-mode-2 button').forEach(b => {
+  b.addEventListener('click', () => {
+    const mode = b.dataset.mode;
+    setModeUI(mode);
+    controller.setMode(mode);
+    // User yêu cầu: bấm Auto là kích hoạt luôn (không cần Start),
+    // bấm Manual là tắt auto, mọi cơ cấu đứng yên.
+    if (mode === 'auto') {
+      controller.start(2);
+    } else {
+      controller.stop(2);
+    }
+  });
+});
+
+/* ===== Option switches ===== */
+document.querySelectorAll('[data-opt]').forEach(inp => {
+  inp.addEventListener('change', () => controller.setOption(inp.dataset.opt, inp.checked));
+});
+
+/* =========================================================================
+   Apply snapshot / hw events from backend
+   ========================================================================= */
+function applySnapshot(snap) {
+  setHwMode(snap.hw_mode, snap.connected);
+  if (snap.started_at) serverStartTime = snap.started_at * 1000;
+
+  // (đã bỏ "chu kỳ hôm nay" + "total cycles" khỏi UI — nên không update mấy id này)
+
+  // áp state cho 2 ngăn
+  ['bin1','bin2'].forEach((bk, i) => {
+    const bin = i + 1;
+    const s = snap[bk];
+    if (!s) return;
+    setBadge(`b${bin}-state`, s.state);
+    setBadge(`home-s${bin}`, s.state);
+    if (s.sensor) applySensor(bin, s.sensor);
+    if (bin === 2 && s.mode) setModeUI(s.mode);
+  });
+
+  // sysinfo: nước rửa (HIGH/LOW), vi sinh (HIGH/LOW), cpu temp
+  if (snap.sysinfo) {
+    if (snap.sysinfo.water != null) updateLiquid('home-water', snap.sysinfo.water);
+    if (snap.sysinfo.bio_level != null) updateLiquid('home-bio', snap.sysinfo.bio_level);
+    if (snap.sysinfo.cpu != null && $('sys-cpu')) $('sys-cpu').textContent = snap.sysinfo.cpu;
+  }
+
+  // Params → steppers
+  if (snap.params) {
+    ['bin1','bin2'].forEach(bk => {
+      const p = snap.params[bk] || {};
+      Object.entries(p).forEach(([k, v]) => {
+        const id = `set-${bk}-${k}`;
+        if ($(id)) { stepperState[`${bk}.${k}`] = v; $(id).textContent = fmtStepper(k, v); }
+      });
+    });
+  }
+
+  // Log history
+  if (snap.logs) {
+    snap.logs.slice().reverse().forEach(l => {
+      const d = new Date(l.ts*1000);
+      addLog(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`,
+             l.level, l.source, l.msg);
+    });
+    logUnread = 0; updateLogBadge();
+  }
+}
+
+// đẩy giá trị cảm biến lên UI — chia 2 nhánh cho 2 ngăn cho gọn
+function applySensor(bin, sensor) {
+  if (bin === 1) {
+    if (sensor.force != null) setGauge1(sensor.force);
+    if (sensor.pos)  { $('b1-pos').textContent = sensor.pos.toUpperCase();  led('b1-led-pos-dot', sensor.pos !== 'home'); }
+    if (sensor.pump) { $('b1-pump').textContent = sensor.pump.toUpperCase(); led('b1-led-pump-dot', sensor.pump === 'on', 'cyan'); }
+  } else {
+    if (sensor.rpm != null) setGauge2(sensor.rpm);
+    // Cảm biến IR: nhớ giá trị mới nhất rồi render theo mode (manual = OFF, auto = CLEAR/DETECT)
+    if (sensor.sense) { _lastSense = sensor.sense.toLowerCase(); renderIRSensor(); }
+    if (sensor.bio)   { $('b2-bio').textContent = sensor.bio.toUpperCase(); led('b2-led-bio-dot', sensor.bio === 'on', 'cyan'); }
+    if (sensor.door)  { $('b2-door').textContent = sensor.door.toUpperCase(); led('b2-led-door-dot', sensor.door === 'open', 'green'); }
+  }
+}
+
+// router event từ backend → hàm xử lý tương ứng
+function handleHwEvent(evt) {
+  const et = evt.type;
+  if (et === 'state') {
+    const b = evt.bin;
+    setBadge(`b${b}-state`, evt.state);
+    setBadge(`home-s${b}`, evt.state);
+    if (evt.state === 'running') $('led-busy').classList.add('on');
+    if (evt.state === 'ready')   $('led-busy').classList.remove('on');
+    if (evt.state === 'error')   { $('led-alarm').classList.add('on'); setTimeout(()=>$('led-alarm').classList.remove('on'), 3500); }
+    if (evt.state === 'done') {
+      // không đếm chu kỳ trên UI nữa, chỉ báo toast
+      toast(`BIN-0${b} · Chu kỳ hoàn tất`);
+    }
+  } else if (et === 'step') {
+    setStep(evt.bin, evt.step, evt.status);
+  } else if (et === 'progress') {
+    // bỏ % chu kỳ rồi nên không cần update ring, nhưng vẫn để hàm no-op cho an toàn
+    setProgress(evt.bin, evt.pct);
+  } else if (et === 'sensor') {
+    applySensor(evt.bin, evt);
+  } else if (et === 'sysinfo') {
+    // nhiệt độ đã bỏ khỏi UI, chỉ giữ cpu temp + 2 mức dung dịch
+    if (evt.cpu != null && $('sys-cpu')) $('sys-cpu').textContent = evt.cpu;
+    if (evt.water != null) updateLiquid('home-water', evt.water);
+    if (evt.bio_level != null) updateLiquid('home-bio', evt.bio_level);
+  } else if (et === 'fill') {
+    // Mức đầy thùng rác — JSN-SR04T phát từ Mega
+    const id = evt.bin === 1 ? 'home-m1fill' : 'home-m2fill';
+    updateFill(id, evt.state);
+  } else if (et === 'mode') {
+    setModeUI(evt.mode);
+  } else if (et === 'log') {
+    const d = new Date((evt.ts || Date.now()/1000) * 1000);
+    addLog(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`,
+           evt.level || 'info', evt.source || 'SYS', evt.msg || '');
+  }
+}
+
+/* =========================================================================
+   Bootstrap — cố kết nối backend, fallback sang demo
+   ========================================================================= */
+setConn('connecting');
+controller = DemoCtl;
+log('HMI khởi động', 'info');
+// init cảm biến IR theo mode mặc định (manual → OFF)
+renderIRSensor();
+
+function bootstrap() {
+  // nếu socket.io.min.js không load được thì bỏ qua, chạy demo luôn
+  if (typeof io === 'undefined') {
+    setConn('demo');
+    controller = DemoCtl;
+    log('Không tải được socket.io — chế độ DEMO', 'warn');
+    setHwMode('?');
+    return;
+  }
+  try {
+    // mặc định io() sẽ kết tới same-origin (cùng host:port với HTML này)
+    socket = io({ reconnection: true, reconnectionDelay: 1500, timeout: 5000 });
+
+    socket.on('connect', () => {
+      // kết nối OK → đổi controller sang Remote
+      isOnline = true;
+      controller = RemoteCtl;
+      setConn('online');
+      log('Backend kết nối', 'success');
+    });
+    socket.on('disconnect', () => {
+      // mất link → quay về Demo để UI không bị đứng
+      isOnline = false;
+      controller = DemoCtl;
+      setConn('offline');
+      log('Mất kết nối backend — chuyển DEMO', 'warn');
+      setHwMode('?');
+    });
+    socket.on('connect_error', () => {
+      // lỗi handshake — vẫn để Demo chạy
+      if (!isOnline) {
+        controller = DemoCtl;
+        setConn('demo');
+      }
+    });
+    socket.on('snapshot', applySnapshot);   // ảnh chụp toàn bộ state lúc mới connect
+    socket.on('hw', handleHwEvent);          // event realtime sau đó
+    // chờ tối đa 4s, nếu vẫn chưa online thì cho phép demo chạy luôn
+    setTimeout(() => {
+      if (!isOnline) {
+        setConn('demo');
+        controller = DemoCtl;
+        log('Backend không phản hồi — chế độ DEMO', 'warn');
+        setHwMode('?');
+      }
+    }, 4000);
+  } catch (e) {
+    setConn('demo');
+    controller = DemoCtl;
+    log('Lỗi socket.io: ' + e.message, 'error');
+  }
+}
+bootstrap();
+</script>
+</body>
+</html>

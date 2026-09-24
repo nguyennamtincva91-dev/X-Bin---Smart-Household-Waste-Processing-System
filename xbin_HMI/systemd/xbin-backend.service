@@ -1,0 +1,27 @@
+[Unit]
+Description=X-BIN HMI Backend (Flask + SocketIO)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@APP_USER@
+Group=@APP_USER@
+WorkingDirectory=@INSTALL_DIR@
+Environment=PYTHONUNBUFFERED=1
+Environment=XBIN_MOCK=0
+# Cho phép sửa cổng UART qua override:
+#   sudo systemctl edit xbin-backend.service
+#   [Service]
+#   Environment=XBIN_SERIAL=/dev/ttyUSB0
+ExecStart=@VENV_DIR@/bin/python @INSTALL_DIR@/app.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+# Cho phép truy cập serial ports
+SupplementaryGroups=dialout
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=X-BIN Chromium Kiosk
+After=graphical.target xbin-backend.service
+Requires=xbin-backend.service
+
+[Service]
+Type=simple
+User=@APP_USER@
+Group=@APP_USER@
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=@APP_HOME@/.Xauthority
+ExecStart=@INSTALL_DIR@/start_kiosk.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
