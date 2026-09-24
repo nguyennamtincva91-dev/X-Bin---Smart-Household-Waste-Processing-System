@@ -11,7 +11,7 @@ xbin_deploy/
 ├── start_kiosk.sh         # Chạy Chromium kiosk thủ công
 ├── requirements.txt       # Python deps
 ├── config.py              # Cấu hình (cổng UART, baudrate, web port,...)
-├── hardware.py            # Lớp giao tiếp UART với STM32 (có mock fallback)
+├── hardware.py            # Lớp giao tiếp UART với MEGA (có mock fallback)
 ├── app.py                 # Backend Flask + SocketIO
 ├── static/
 │   └── index.html         # Giao diện HMI 7-inch
@@ -30,16 +30,16 @@ xbin_deploy/
 | OS                | Ubuntu 22.04 LTS (Desktop), kiến trúc x86_64 / arm64 |
 | Mạng              | Kết nối Internet 1 lần để cài (`apt` + `pip`)        |
 | Người dùng        | Có quyền `sudo`                                      |
-| Phần cứng X-BIN   | (Tuỳ chọn) STM32/Arduino nối qua USB-UART; không có vẫn chạy được nhờ chế độ MOCK |
+| Phần cứng X-BIN   | (Tuỳ chọn) MEGA nối qua USB-UART; không có vẫn chạy được nhờ chế độ MOCK |
 
 ---
 
 ## 2. Cài đặt nhanh (1 lệnh)
 
-Copy thư mục `xbin_deploy/` lên Q509 (qua USB, scp, git, ...), mở Terminal:
+Copy thư mục `xbin_HMI/` lên Q509 (qua USB, scp, git, ...), mở Terminal:
 
 ```bash
-cd ~/xbin_deploy
+cd ~/xbin_HMI
 sudo bash install.sh
 ```
 
@@ -90,7 +90,7 @@ http://<IP_của_Q509>:5000
 
 ---
 
-## 4. Kết nối phần cứng STM32 / Arduino
+## 4. Kết nối phần cứng Arduino
 
 ### 4.1 Cổng UART
 Mặc định `hardware.py` thử mở theo thứ tự:
@@ -116,7 +116,7 @@ sudo systemctl restart xbin-backend
 ```
 
 ### 4.2 Giao thức UART (JSON 1 dòng / lệnh)
-**HMI → STM32:**
+**HMI → MEGA:**
 ```json
 {"cmd":"start","bin":1}
 {"cmd":"stop","bin":2}
@@ -126,7 +126,7 @@ sudo systemctl restart xbin-backend
 {"cmd":"set_mode","bin":2,"mode":"auto"}
 ```
 
-**STM32 → HMI:**
+**MEGA → HMI:**
 ```json
 {"type":"state","bin":1,"state":"running"}            // ready|running|done|error
 {"type":"step","bin":1,"step":"press","status":"active"} // active|done
@@ -138,9 +138,9 @@ sudo systemctl restart xbin-backend
 ```
 
 Mỗi message phải kết thúc bằng `\n`. Baudrate mặc định **115200 8N1**.
-Anh có thể chỉnh `SERIAL_BAUDRATE` trong `config.py`.
+có thể chỉnh `SERIAL_BAUDRATE` trong `config.py`.
 
-### 4.3 Khi chưa nối STM32
+### 4.3 Khi chưa nối MEGA
 Backend sẽ tự fallback **MOCK mode** — sinh dữ liệu giả lập đầy đủ để demo / test giao diện.
 Bắt buộc dùng mock dù có cổng UART:
 ```bash
@@ -195,7 +195,7 @@ sudo systemctl stop xbin-backend
 | Không thấy `/dev/ttyUSB0`                    | `dmesg | tail` để xem có nhận thiết bị USB-UART không, kiểm tra cáp + driver CH340 |
 | `PermissionError: /dev/ttyUSB0`              | Logout/login lại sau install (group `dialout`) hoặc `sudo chmod 666 /dev/ttyUSB0` |
 | HMI hiện "DEMO" thay vì "ONLINE"             | Backend không chạy, hoặc Chromium không vào được http://localhost:5000     |
-| HMI hiện "ONLINE · MOCK"                     | Backend OK, nhưng không tìm thấy STM32 → dùng dữ liệu giả; nối STM32 + restart |
+| HMI hiện "ONLINE · MOCK"                     | Backend OK, nhưng không tìm thấy MEGA → dùng dữ liệu giả; nối MEGA + restart |
 | Chromium hỏi "Restore pages?"                | Script đã xử lý, nhưng nếu vẫn hiện: xoá `~/.config/xbin-kiosk` rồi chạy lại |
 | Touch screen không nhạy / sai vị trí         | Calibrate trong **Settings → Devices → Wacom Tablet** hoặc dùng `xinput-calibrator` |
 | Màn tự tắt sau vài phút                      | Đảm bảo `xset s off; xset -dpms; xset s noblank` chạy — file `xbin-noblank.desktop` đã được tạo |
@@ -231,7 +231,7 @@ Sẽ gỡ services, autostart và `/opt/xbin`. Source code trong `~/xbin_deploy/
                                               │ /dev/ttyUSB0
                                               ▼
                                     ┌───────────────────┐
-                                    │  STM32F103C8      │
+                                    │  MEGA 2560 R3     │
                                     │   - Loadcell      │
                                     │   - Motor ép      │
                                     │   - Cảm biến IR   │
